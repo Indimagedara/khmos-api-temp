@@ -82,20 +82,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $secret_key,
                         'HS512'
                     );
-                    http_response_code(200);
-                    echo json_encode([
-                        'status' => 1,
-                        'message' => 'User logged in successfully.',
-                        'data' => [
-                            'userId' => $user_data['UserId'],
-                            'accessToken' => $jwt,
-                            'refreshToken' => $refreshToken,
-                            'email' => $user_data['Email'],
-                            'role' => $user_data['Role'],
-                            'permissions' => $permissions,
-                            'isPasswordChanged' => $user_data['IsPasswordChanged'],
-                        ],
-                    ]);
+                       http_response_code(200);
+                        echo json_encode([
+                            'status' => 1,
+                            'message' => 'User logged in successfully.',
+                            'data' => [
+                                'userId' => $user_data['UserId'],
+                                'accessToken' => $jwt,
+                                'refreshToken' => $refreshToken,
+                                'email' => $user_data['Email'],
+                                'role' => $user_data['Role'],
+                                'permissions' => $permissions,
+                                'isPasswordChanged' => $user_data['IsPasswordChanged'],
+                            ],
+                        ]);
                 } else {
                     http_response_code(400);
                     echo json_encode([

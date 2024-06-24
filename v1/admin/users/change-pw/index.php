@@ -11,6 +11,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 require '../../../../config/db.php';
+include '../../../../services/authorize-token.php';
+
+$sectionId = 1;
+$action = 'Change Password';
+$empId = getUserId();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'));
@@ -24,6 +29,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (mysqli_query($con, $query)) {
             if (mysqli_affected_rows($con) > 0) {
+                $auditMessage = "Password saved successfully for $userId ";
+                $sanitizedMessage = mysqli_real_escape_string($con, trim($auditMessage));
+                $qry = "INSERT INTO `audit_trail` (`user_id`, `section_id`, `action`, `new_query`) VALUES ('$empId', '$sectionId', '$action', '$sanitizedMessage')";
+                if (mysqli_query($con, $qry)) {
+                    echo json_encode([
+                        'status' => 1,
+                        'message' => 'Password changed successfully.',
+                        'auditStatus' => 'Audit added'
+                    ]);
+                    http_response_code(200);
+                }else{
+                    echo json_encode([
+                        'status' => 1,
+                        'message' => 'Password changed successfully.',
+                        'auditStatus' => 'Audit not added'
+                    ]);
+                    http_response_code(200);
+                }
                 echo json_encode([
                     'status' => 1,
                     'message' => 'Password changed successfully.'

@@ -7,9 +7,13 @@ header("Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Ac
 //DB details
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
-define('DB_PASS', 'Login@119');
-define('DB_NAME', 'uat-khmos');
-
+define('DB_PASS', '');
+// define('DB_NAME', 'meal-system');
+define('DB_NAME', 'kings');
+// define('DB_HOST', 'codebrix-sys.xyz');
+// define('DB_USER', 'cbdev');
+// define('DB_PASS', 'Technix@2021');
+// define('DB_NAME', 'meal-system');
 
 date_default_timezone_set("Asia/Colombo");
 

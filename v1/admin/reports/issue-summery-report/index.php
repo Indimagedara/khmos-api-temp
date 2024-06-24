@@ -3,6 +3,11 @@
 header('Content-Type: application/json');
 
 require '../../../../config/db.php';
+include '../../../../services/authorize-token.php';
+
+$sectionId = 1;
+$action = 'Reports';
+$empId = getUserId();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $startDate = isset($_GET['startDate']) ? $_GET['startDate'] : null;
@@ -54,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
             while ($row = mysqli_fetch_assoc($result)) {
                 // Determine the correct amount based on whether the order index exceeds the limit
-                if ($orderCount < 40) {
+                if ($orderCount < 50) {
                     $row['Amount'] = $discountedPrices[$row['OptionName']];
                 } else {
                     $row['Amount'] = $exceededPrices[$row['OptionName']];
@@ -63,13 +68,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $orders[] = $row;
                 $orderCount++;
             }
-
-            echo json_encode([
-                'status' => 1,
-                'count' => mysqli_num_rows($result),
-                'data' => $orders
-            ]);
-            http_response_code(200);
+            $auditMessage = "$empId is generated the issue summery report.";
+            $sanitizedMessage = mysqli_real_escape_string($con, trim($auditMessage));
+            $qry = "INSERT INTO `audit_trail` (`user_id`, `section_id`, `action`, `new_query`) VALUES ('$empId', '$sectionId', '$action', '$sanitizedMessage')";
+            if (mysqli_query($con, $qry)) {
+                echo json_encode([
+                    'status' => 1,
+                    'count' => mysqli_num_rows($result),
+                    'data' => $orders,
+                    'auditStatus' => 'Audit added'
+                ]);
+                http_response_code(200);
+            }else{
+                echo json_encode([
+                    'status' => 1,
+                    'count' => mysqli_num_rows($result),
+                    'data' => $orders,
+                    'auditStatus' => 'Audit not added'
+                ]);
+                http_response_code(200);
+            }
         } else {
             echo json_encode([
                 'status' => 0,

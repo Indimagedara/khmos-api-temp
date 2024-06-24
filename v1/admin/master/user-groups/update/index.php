@@ -11,6 +11,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 require '../../../../../config/db.php';
+include '../../../../../services/authorize-token.php';
+
+$sectionId = 1;
+$action = 'Master data User groups';
+$empId = getUserId();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'));
@@ -27,11 +32,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (mysqli_query($con, $query)) {
             if (mysqli_affected_rows($con) > 0) {
-                echo json_encode([
-                    'status' => 1,
-                    'message' => 'User group updated successfully.'
-                ]);
-                http_response_code(200);
+                $auditMessage = "$empId is updated the USer group UserGroup = '$userGroup', MealLimit = $mealLimit, IsOverride = $isOverride WHERE UgId = $ugId";
+                $sanitizedMessage = mysqli_real_escape_string($con, trim($auditMessage));
+                $qry = "INSERT INTO `audit_trail` (`user_id`, `section_id`, `action`, `new_query`) VALUES ('$empId', '$sectionId', '$action', '$sanitizedMessage')";
+                if (mysqli_query($con, $qry)) {
+                    echo json_encode([
+                        'status' => 1,
+                        'message' => 'User group updated successfully.',
+                        'auditStatus' => 'Audit added'
+                    ]);
+                    http_response_code(200);
+                }else{
+                    echo json_encode([
+                        'status' => 1,
+                        'message' => 'User group updated successfully.',
+                        'auditStatus' => 'Audit not added'
+                    ]);
+                    http_response_code(200);
+                }
             } else {
                 echo json_encode([
                     'status' => 0,

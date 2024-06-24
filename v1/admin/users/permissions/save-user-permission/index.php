@@ -17,6 +17,10 @@ include_once '../../../../../config/db.php';
 include_once '../../../../../services/user-services.php';
 include_once '../../../../../services/authorize-token.php';
 
+$sectionId = 1;
+$action = 'Save User Permission';
+$empId = getUserId();
+
 //objects
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $data = json_decode(file_get_contents('php://input'));
@@ -33,11 +37,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $users_query = "INSERT INTO `userpermission` (up_id, user_id, role_id, permission) VALUES ('{$up_id}','{$user_id}', '{$role_id}','{$permission}')";
     if (mysqli_query($con, $users_query) === true) {
-      http_response_code(200);
-      echo json_encode([
-        'status' => 1,
-        'message' => 'User permission added successfully.',
-      ]);
+      $auditMessage = "Fname = '$fname',Lname = '$lname',Phone = '$phone',EmpNumber = '$empNumber',DevisionId = '$devisionId',Email = '$email',UserGroup = '$userGroup',IsAdmin = '$isAdmin',`Status` = '$status',`Role` = '$role' For UserId = $userId";
+      $sanitizedMessage = mysqli_real_escape_string($con, trim($auditMessage));
+      $qry = "INSERT INTO `audit_trail` (`user_id`, `section_id`, `action`, `new_query`) VALUES ('$empId', '$sectionId', '$action', '$sanitizedMessage')";
+      if (mysqli_query($con, $qry)) {
+          echo json_encode([
+              'status' => 1,
+              'message' => 'User permission added successfully.',
+              'auditStatus' => 'Audit added'
+          ]);
+          http_response_code(200);
+      }else{
+          echo json_encode([
+              'status' => 1,
+              'message' => 'User permission added successfully.',
+              'auditStatus' => 'Audit not added'
+          ]);
+          http_response_code(200);
+      }
     } else {
       http_response_code(400);
       echo json_encode([
