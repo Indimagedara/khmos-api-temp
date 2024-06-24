@@ -3,6 +3,11 @@
 header('Content-Type: application/json');
 
 require '../../../../config/db.php';
+include '../../../../services/authorize-token.php';
+
+$sectionId = 1;
+$action = 'Reports';
+$empId = getUserId();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $department = isset($_GET['department']) ? $_GET['department'] : null;
@@ -57,7 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         if ($result) {
             $orders = [];
             $orderCount = 0;
-
             while ($row = mysqli_fetch_assoc($result)) {
                 $orderCount++;
                 if ($orderCount <= 50) {
@@ -68,13 +72,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
                 $orders[] = $row;
             }
-
-            echo json_encode([
-                'status' => 1,
-                'count' => mysqli_num_rows($result),
-                'data' => $orders
-            ]);
-            http_response_code(200);
+            $auditMessage = "$empId is generated the order and charges issue report.";
+            $sanitizedMessage = mysqli_real_escape_string($con, trim($auditMessage));
+            $qry = "INSERT INTO `audit_trail` (`user_id`, `section_id`, `action`, `new_query`) VALUES ('$empId', '$sectionId', '$action', '$sanitizedMessage')";
+            if (mysqli_query($con, $qry)) {
+                echo json_encode([
+                    'status' => 1,
+                    'count' => mysqli_num_rows($result),
+                    'data' => $orders,
+                    'auditStatus' => 'Audit added'
+                ]);
+                http_response_code(200);
+            }else{
+                echo json_encode([
+                    'status' => 1,
+                    'count' => mysqli_num_rows($result),
+                    'data' => $orders,
+                    'auditStatus' => 'Audit not added'
+                ]);
+                http_response_code(200);
+            }
         } else {
             echo json_encode([
                 'status' => 0,

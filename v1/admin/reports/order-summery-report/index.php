@@ -3,24 +3,30 @@
 header('Content-Type: application/json');
 
 require '../../../../config/db.php';
+include '../../../../services/authorize-token.php';
+
+$sectionId = 1;
+$action = 'Reports';
+$empId = getUserId();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $startDate = isset($_GET['startDate']) ? $_GET['startDate'] : null;
     $endDate = isset($_GET['endDate']) ? $_GET['endDate'] : '';
     $orders = [];
     $issues = [];
+    
     if ($startDate !== null) {
-        $formattedstartDate = date('m/d/Y', strtotime($startDate));
-        $formattedendDate = ($endDate !== '') ? date('m/d/Y', strtotime($endDate)) : null;
+        $formattedStartDate = date('Y-m-d', strtotime($startDate));
+        $formattedEndDate = ($endDate !== '') ? date('Y-m-d', strtotime($endDate)) : null;
 
         $currentYear = date("Y");
         $currentMonth = date("m");
-        $fromYear = $currentMonth == 1 ? $currentYear - 1: $currentYear;
+        $fromYear = $currentMonth == 1 ? $currentYear - 1 : $currentYear;
         $toYear = $currentYear;
         $fromMonth = $currentMonth == 1 ? 12 : $currentMonth - 1;
-        
-        $fromDate = $fromYear.'-'.$fromMonth.'-16';
-        $toDate = $toYear.'-'.$currentMonth.'-15';
+
+        $fromDate = $fromYear . '-' . str_pad($fromMonth, 2, '0', STR_PAD_LEFT) . '-16';
+        $toDate = $toYear . '-' . str_pad($currentMonth, 2, '0', STR_PAD_LEFT) . '-15';
 
         $discountedPrices = [
             '1' => 140,
@@ -41,18 +47,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                   LEFT JOIN Division d ON o.DivisionId = d.DevsionId
                   LEFT JOIN Locations l ON o.Location = l.LocId";
 
-        if ($formattedendDate !== null) {
-            $query .= " WHERE STR_TO_DATE(o.OrderDate, '%m/%d/%Y') BETWEEN '$startDate' AND '$endDate'";
+        if ($formattedEndDate !== null) {
+            $query .= " WHERE o.OrderDate BETWEEN '$formattedStartDate' AND '$formattedEndDate'";
         } else {
-            $query .= " WHERE STR_TO_DATE(o.OrderDate, '%m/%d/%Y') BETWEEN '$startDate' AND '$toDate'";
+            $query .= " WHERE o.OrderDate BETWEEN '$formattedStartDate' AND '$toDate'";
         }
 
         $query2 = $query . " LEFT JOIN orderpickup op ON op.OrderId = o.OrderId";
 
-        if ($formattedendDate !== null) {
-            $query2 .= " WHERE STR_TO_DATE(o.OrderDate, '%m/%d/%Y') BETWEEN '$startDate' AND '$endDate'";
+        if ($formattedEndDate !== null) {
+            $query2 .= " WHERE o.OrderDate BETWEEN '$formattedStartDate' AND '$formattedEndDate'";
         } else {
-            $query2 .= " WHERE STR_TO_DATE(o.OrderDate, '%m/%d/%Y') BETWEEN '$startDate' AND '$toDate'";
+            $query2 .= " WHERE o.OrderDate BETWEEN '$formattedStartDate' AND '$toDate'";
         }
 
         $query .= " ORDER BY o.OrderId DESC";
@@ -78,14 +84,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             while ($row2 = mysqli_fetch_assoc($result2)) {
                 $issues[] = $row2;
             }
-
-            echo json_encode([
-                'status' => 1,
-                'count' => mysqli_num_rows($result),
-                'data' => $orders,
-                'issueData' => $issues
-            ]);
-            http_response_code(200);
+            $auditMessage = "$empId is generated the order summery issue report.";
+            $sanitizedMessage = mysqli_real_escape_string($con, trim($auditMessage));
+            $qry = "INSERT INTO `audit_trail` (`user_id`, `section_id`, `action`, `new_query`) VALUES ('$empId', '$sectionId', '$action', '$sanitizedMessage')";
+            if (mysqli_query($con, $qry)) {
+                echo json_encode([
+                    'status' => 1,
+                    'count' => mysqli_num_rows($result),
+                    'data' => $orders,
+                    'issueData' => $issues,
+                    'auditStatus' => 'Audit added'
+                ]);
+                http_response_code(200);
+            } else {
+                echo json_encode([
+                    'status' => 1,
+                    'count' => mysqli_num_rows($result),
+                    'data' => $orders,
+                    'issueData' => $issues,
+                    'auditStatus' => 'Audit not added'
+                ]);
+                http_response_code(200);
+            }
         } else {
             echo json_encode([
                 'status' => 0,

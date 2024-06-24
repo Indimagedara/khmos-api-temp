@@ -1,14 +1,4 @@
 <?php
-//header('Access-Control-Allow-Origin: *');
-header("Access-Control-Allow-Methods: HEAD, GET, POST, PUT, PATCH, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Request-Method,Access-Control-Request-Headers, Authorization");
-header('Content-Type: application/json');
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    header("Access-Control-Allow-Origin: *");
-    header("Access-Control-Allow-Methods: HEAD, GET, POST, PUT, PATCH, DELETE, OPTIONS");
-    header("Access-Control-Allow-Headers: X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization");
-    exit;
-}
 include_once __DIR__ . '/../v1/auth/validate-jwt/index.php';
 include_once __DIR__ .
     '/../vendor/firebase/php-jwt/src/BeforeValidException.php';
@@ -59,18 +49,22 @@ function getAuthorizationHeader()
     }
     return $headers;
 }
-/**
- * get access token from header
- * */
 function getBearerToken()
 {
     $headers = getAuthorizationHeader();
-    // HEADER: Get the access token from the header
     if (!empty($headers)) {
         if (preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
             return $matches[1];
         }
     }
     return null;
+}
+
+function getUserId(){
+    $token = getBearerToken();
+    $decoded = ((base64_decode(str_replace('_', '/', str_replace('-','+',explode('.', $token)[1])))));
+    $decodedArry = json_decode($decoded, true);
+    $userId = $decodedArry['data']['id'];
+    return $userId;
 }
 ?>

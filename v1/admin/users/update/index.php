@@ -12,6 +12,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 require '../../../../config/db.php';
 
+// include '../../../../services/audit-services.php';
+include '../../../../services/authorize-token.php';
+
+$sectionId = 1;
+$action = 'Update User';
+$empId = getUserId();
+// echo $token;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'));
     if (!empty($data->UserId) && !empty($data->Fname) && !empty($data->EmpNumber) && !empty($data->DivisionId) && !empty($data->UserGroup)) {
@@ -39,14 +47,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     `Status` = '$status',
                     `Role` = '$role'
                   WHERE UserId = $userId";
-        // echo $query;
         if (mysqli_query($con, $query)) {
             if (mysqli_affected_rows($con) > 0) {
-                echo json_encode([
-                    'status' => 1,
-                    'message' => 'User updated successfully.'
-                ]);
-                http_response_code(200);
+                $auditMessage = "Fname = '$fname',Lname = '$lname',Phone = '$phone',EmpNumber = '$empNumber',DevisionId = '$devisionId',Email = '$email',UserGroup = '$userGroup',IsAdmin = '$isAdmin',`Status` = '$status',`Role` = '$role' For UserId = $userId";
+                $sanitizedMessage = mysqli_real_escape_string($con, trim($auditMessage));
+                $qry = "INSERT INTO `audit_trail` (`user_id`, `section_id`, `action`, `new_query`) VALUES ('$empId', '$sectionId', '$action', '$sanitizedMessage')";
+                // $audit = logAction($conn, $sectionId, $action, json_encode($data));
+                if (mysqli_query($con, $qry)) {
+                    echo json_encode([
+                        'status' => 1,
+                        'message' => 'User updated successfully.',
+                        'auditStatus' => 'Audit added'
+                    ]);
+                    http_response_code(200);
+                }else{
+                    echo json_encode([
+                        'status' => 1,
+                        'message' => 'User updated successfully.',
+                        'auditStatus' => 'Audit not added'
+                    ]);
+                    http_response_code(200);
+                }
             } else {
                 echo json_encode([
                     'status' => 0,

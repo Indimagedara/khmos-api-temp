@@ -11,6 +11,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 require '../../../../config/db.php';
+include '../../../../services/authorize-token.php';
+
+$sectionId = 1;
+$action = 'Update User';
+$empId = getUserId();
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'));
@@ -49,11 +55,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (mysqli_query($con, $insertQuery)) {
                 if (mysqli_affected_rows($con) == 1) {
-                    echo json_encode([
-                        'status' => 1,
-                        'message' => 'User inserted successfully.'
-                    ]);
-                    http_response_code(200);
+                    $auditMessage = "(`UserId`, `Fname`, `Lname`, `Phone`, `EmpNumber`, `DevisionId`, `Email`, `UserGroup`, `Password`, `Token`, `IsPasswordChanged`, `DateCreated`) VALUES (null, '$fname', '$lname', '$phone', '$empNumber', '$divisionId', '$email', '$userGroup', '$new_password_hash', '', '$isPasswordChanged', '$dateTime')";
+                    $sanitizedMessage = mysqli_real_escape_string($con, trim($auditMessage));
+                    $qry = "INSERT INTO `audit_trail` (`user_id`, `section_id`, `action`, `new_query`) VALUES ('$empId', '$sectionId', '$action', '$sanitizedMessage')";
+                    if (mysqli_query($con, $qry)) {
+                        echo json_encode([
+                            'status' => 1,
+                            'message' => 'User added successfully.',
+                            'auditStatus' => 'Audit added'
+                        ]);
+                        http_response_code(200);
+                    }else{
+                        echo json_encode([
+                            'status' => 1,
+                            'message' => 'User added successfully.',
+                            'auditStatus' => 'Audit not added'
+                        ]);
+                        http_response_code(200);
+                    }
                 } else {
                     echo json_encode([
                         'status' => 0,
